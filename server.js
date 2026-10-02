@@ -22,43 +22,57 @@ const wss = new WebSocket.Server({
 });
 
 
-let proximoID = 1;
+
+const LARGURA = 400;
+const ALTURA = 700;
+
+const PLAYER_W = 70;
+const PLAYER_H = 70;
+
+const GRAVIDADE = 0.45;
+const PULO = -8;
+
+const VELOCIDADE = 3;
+
+const OBSTACULO_W = 70;
+const ABERTURA = 190;
+
+const INTERVALO_OBSTACULO = 1600;
+const INTERVALO_ESTRELA = 1200;
+
+
 
 const jogadores = {};
 
-let obstaculos = [];
+let proximoID = 1;
 
-let score = 0;
+let obstaculos = [];
+let estrelas = [];
+
+let proximoObstaculo = 1;
+let proximaEstrela = 1;
+
+let pontuacao = 0;
 
 let jogoAtivo = false;
 
 let ultimoObstaculo = 0;
-
-let proximoObstaculo = 0;
-
+let ultimaEstrela = 0;
 
 
 
-const LARGURA = 400;
+function colisao(a, b) {
 
-const ALTURA = 700;
+  const margem = 8;
 
-const PLAYER_W = 55;
+  return !(
+    a.x + a.width - margem < b.x ||
+    a.x + margem > b.x + b.width ||
+    a.y + a.height - margem < b.y ||
+    a.y + margem > b.y + b.height
+  );
 
-const PLAYER_H = 55;
-
-const GRAVIDADE = 0.45;
-
-const PULO = -8;
-
-const VELOCIDADE = 3.5;
-
-const OBSTACULO_W = 65;
-
-const ABERTURA = 190;
-
-const INTERVALO = 1600;
-
+}
 
 
 
@@ -66,27 +80,33 @@ function criarObstaculo() {
 
   const margem = 80;
 
-  const max =
+  const maxCima =
     ALTURA -
     ABERTURA -
     margem;
 
-  const aberturaY =
-    Math.floor(
-      Math.random() *
-      (max - margem)
-    ) + margem;
+  const alturaCima =
+    Math.random() *
+    (maxCima - margem)
+    + margem;
+
+  const alturaBaixo =
+    ALTURA -
+    alturaCima -
+    ABERTURA;
 
 
   obstaculos.push({
 
-    id: ++proximoObstaculo,
+    id: proximoObstaculo++,
 
-    x: LARGURA + 20,
+    x: LARGURA,
 
-    aberturaY,
+    largura: OBSTACULO_W,
 
-    abertura: ABERTURA,
+    cima: alturaCima,
+
+    baixo: alturaBaixo,
 
     passou: false
 
@@ -96,98 +116,61 @@ function criarObstaculo() {
 
 
 
+function criarEstrela() {
 
-function colisao(a, b) {
+  const margem = 100;
 
-  return !(
-    a.x + a.width < b.x ||
-    a.x > b.x + b.width ||
-    a.y + a.height < b.y ||
-    a.y > b.y + b.height
-  );
-
-}
+  const y =
+    margem +
+    Math.random() *
+    (ALTURA - margem * 2);
 
 
-function jogadorColidiu(jogador) {
+  estrelas.push({
 
-  if (
-    jogador.y < 0 ||
-    jogador.y + PLAYER_H > ALTURA
-  ) {
+    id: proximaEstrela++,
 
-    return true;
+    x: LARGURA + 20,
 
-  }
+    y,
 
+    tamanho: 30
 
-  const player = {
-
-    x: jogador.x,
-
-    y: jogador.y,
-
-    width: PLAYER_W,
-
-    height: PLAYER_H
-
-  };
-
-
-  for (
-    const obstaculo of obstaculos
-  ) {
-
-    const cima = {
-
-      x: obstaculo.x,
-
-      y: 0,
-
-      width: OBSTACULO_W,
-
-      height:
-        obstaculo.aberturaY
-
-    };
-
-
-    const baixo = {
-
-      x: obstaculo.x,
-
-      y:
-        obstaculo.aberturaY +
-        obstaculo.abertura,
-
-      width: OBSTACULO_W,
-
-      height:
-        ALTURA -
-        (
-          obstaculo.aberturaY +
-          obstaculo.abertura
-        )
-
-    };
-
-
-    if (
-      colisao(player, cima) ||
-      colisao(player, baixo)
-    ) {
-
-      return true;
-
-    }
-
-  }
-
-
-  return false;
+  });
 
 }
 
+
+
+function iniciarJogo() {
+
+  jogoAtivo = true;
+
+  pontuacao = 0;
+
+  obstaculos = [];
+  estrelas = [];
+
+  ultimoObstaculo = Date.now();
+  ultimaEstrela = Date.now();
+
+
+  Object.values(jogadores)
+    .forEach(jogador => {
+
+      jogador.x = 70;
+
+      jogador.y = ALTURA * 0.4;
+
+      jogador.velocidadeY = 0;
+
+      jogador.vivo = true;
+
+      jogador.estrelas = 0;
+
+    });
+
+}
 
 
 
@@ -199,28 +182,46 @@ function enviarEstado() {
 
     jogadores:
       Object.values(jogadores)
-        .map(jogador => ({
+      .map(jogador => ({
 
-          id: jogador.id,
+        id: jogador.id,
 
-          nome: jogador.nome,
+        nome: jogador.nome,
 
-          x: jogador.x,
+        x: jogador.x,
 
-          y: jogador.y,
+        y: jogador.y,
 
-          vivo: jogador.vivo
+        vivo: jogador.vivo,
 
-        })),
+        estrelas:
+          jogador.estrelas || 0
 
-    obstaculos,
+      })),
 
-    score,
+    obstaculos:
+      obstaculos.map(obj => ({
+
+        id: obj.id,
+
+        x: obj.x,
+
+        largura: obj.largura,
+
+        cima: obj.cima,
+
+        baixo: obj.baixo
+
+      })),
+
+    estrelas,
+
+    score: pontuacao,
 
     jogo:
       jogoAtivo
-        ? "jogando"
-        : "parado"
+      ? "jogando"
+      : "parado"
 
   };
 
@@ -246,55 +247,9 @@ function enviarEstado() {
 
 
 
+wss.on("connection", socket => {
 
-function iniciarJogo() {
-
-  if (
-    Object.keys(jogadores).length === 0
-  ) {
-
-    return;
-
-  }
-
-
-  score = 0;
-
-  obstaculos = [];
-
-  proximoObstaculo = 0;
-
-  jogoAtivo = true;
-
-  ultimoObstaculo =
-    Date.now();
-
-
-  Object.values(jogadores)
-    .forEach(jogador => {
-
-      jogador.x = 70;
-
-      jogador.y = 300;
-
-      jogador.velocidadeY = 0;
-
-      jogador.vivo = true;
-
-    });
-
-
-  enviarEstado();
-
-}
-
-
-
-
-wss.on("connection", ws => {
-
-  const id =
-    proximoID++;
+  const id = proximoID++;
 
 
   jogadores[id] = {
@@ -306,47 +261,37 @@ wss.on("connection", ws => {
 
     x: 70,
 
-    y: 300,
+    y: ALTURA * 0.4,
 
     velocidadeY: 0,
 
     vivo: true,
 
-    ws
+    estrelas: 0,
+
+    socket
 
   };
 
 
-  console.log(
-    "Jogador entrou:",
+  socket.send(JSON.stringify({
+
+    tipo: "id",
+
     id
-  );
 
-
-  ws.send(
-    JSON.stringify({
-
-      tipo: "id",
-
-      id
-
-    })
-  );
+  }));
 
 
   enviarEstado();
 
 
-
-
-  ws.on("message", mensagem => {
+  socket.on("message", mensagem => {
 
     try {
 
       const dados =
-        JSON.parse(
-          mensagem.toString()
-        );
+        JSON.parse(mensagem);
 
 
       const jogador =
@@ -356,7 +301,6 @@ wss.on("connection", ws => {
       if (!jogador) return;
 
 
- 
 
       if (
         dados.tipo === "pular"
@@ -376,27 +320,30 @@ wss.on("connection", ws => {
 
 
 
-
       if (
         dados.tipo === "nome"
       ) {
 
-        if (
-          typeof dados.nome ===
-          "string"
-        ) {
+        let nome =
+          String(
+            dados.nome || ""
+          ).trim();
 
-          jogador.nome =
-            dados.nome
-              .trim()
-              .slice(0, 20);
+
+        if (!nome) {
+
+          nome =
+            "Jogador " + id;
 
         }
+
+
+        jogador.nome =
+          nome.substring(0, 20);
 
       }
 
 
- 
 
       if (
         dados.tipo === "comecar"
@@ -412,7 +359,6 @@ wss.on("connection", ws => {
 
 
 
-
       if (
         dados.tipo === "reiniciar"
       ) {
@@ -424,7 +370,8 @@ wss.on("connection", ws => {
     } catch (erro) {
 
       console.log(
-        "Mensagem inválida"
+        "Mensagem inválida:",
+        erro.message
       );
 
     }
@@ -432,34 +379,22 @@ wss.on("connection", ws => {
   });
 
 
-
-
-  ws.on("close", () => {
+  socket.on("close", () => {
 
     delete jogadores[id];
 
 
-    console.log(
-      "Jogador saiu:",
-      id
-    );
-
-
     if (
-      Object.keys(jogadores)
-        .length === 0
+      Object.keys(jogadores).length === 0
     ) {
 
       jogoAtivo = false;
 
       obstaculos = [];
 
-      score = 0;
+      estrelas = [];
 
     }
-
-
-    enviarEstado();
 
   });
 
@@ -467,26 +402,58 @@ wss.on("connection", ws => {
 
 
 
-
 setInterval(() => {
 
   if (!jogoAtivo) {
+
+    enviarEstado();
 
     return;
 
   }
 
 
+  const agora = Date.now();
+
+
+  if (
+    agora - ultimoObstaculo >=
+    INTERVALO_OBSTACULO
+  ) {
+
+    criarObstaculo();
+
+    ultimoObstaculo = agora;
+
+  }
+
+
+
+  if (
+    agora - ultimaEstrela >=
+    INTERVALO_ESTRELA
+  ) {
+
+    criarEstrela();
+
+    ultimaEstrela = agora;
+
+  }
+
+
+
+  let jogadoresVivos = 0;
 
 
   Object.values(jogadores)
     .forEach(jogador => {
 
       if (!jogador.vivo) {
-
         return;
-
       }
+
+
+      jogadoresVivos++;
 
 
       jogador.velocidadeY +=
@@ -497,65 +464,165 @@ setInterval(() => {
         jogador.velocidadeY;
 
 
+
       if (
-        jogadorColidiu(jogador)
+        jogador.y < 0 ||
+        jogador.y + PLAYER_H >
+        ALTURA
       ) {
 
         jogador.vivo = false;
 
+        return;
+
       }
+
+
+      const playerBox = {
+
+        x: jogador.x,
+
+        y: jogador.y,
+
+        width: PLAYER_W,
+
+        height: PLAYER_H
+
+      };
+
+
+
+      for (
+        const obstaculo of obstaculos
+      ) {
+
+        const cimaBox = {
+
+          x: obstaculo.x,
+
+          y: 0,
+
+          width:
+            obstaculo.largura,
+
+          height:
+            obstaculo.cima
+
+        };
+
+
+        const baixoBox = {
+
+          x: obstaculo.x,
+
+          y:
+            ALTURA -
+            obstaculo.baixo,
+
+          width:
+            obstaculo.largura,
+
+          height:
+            obstaculo.baixo
+
+        };
+
+
+        if (
+          colisao(
+            playerBox,
+            cimaBox
+          ) ||
+          colisao(
+            playerBox,
+            baixoBox
+          )
+        ) {
+
+          jogador.vivo = false;
+
+          break;
+
+        }
+
+      }
+
+
+      if (!jogador.vivo) {
+        return;
+      }
+
+
+
+      estrelas =
+        estrelas.filter(estrela => {
+
+          const estrelaBox = {
+
+            x: estrela.x,
+
+            y: estrela.y,
+
+            width:
+              estrela.tamanho,
+
+            height:
+              estrela.tamanho
+
+          };
+
+
+          if (
+            colisao(
+              playerBox,
+              estrelaBox
+            )
+          ) {
+
+            jogador.estrelas++;
+
+            pontuacao += 10;
+
+            return false;
+
+          }
+
+
+          return true;
+
+        });
 
     });
 
 
+  obstaculos.forEach(obstaculo => {
+
+    obstaculo.x -=
+      VELOCIDADE;
 
 
-  obstaculos.forEach(
-    obstaculo => {
+    if (
+      !obstaculo.passou &&
+      obstaculo.x +
+      obstaculo.largura <
+      70
+    ) {
 
-      obstaculo.x -=
-        VELOCIDADE;
+      obstaculo.passou = true;
 
-    }
-  );
-
-
-
-
-  if (
-    Date.now() -
-    ultimoObstaculo >
-    INTERVALO
-  ) {
-
-    criarObstaculo();
-
-    ultimoObstaculo =
-      Date.now();
-
-  }
-
-
-
-
-  obstaculos.forEach(
-    obstaculo => {
-
-      if (
-        !obstaculo.passou &&
-        obstaculo.x +
-        OBSTACULO_W < 70
-      ) {
-
-        obstaculo.passou = true;
-
-        score++;
-
-      }
+      pontuacao++;
 
     }
-  );
 
+  });
+
+
+  estrelas.forEach(estrela => {
+
+    estrela.x -=
+      VELOCIDADE;
+
+  });
 
 
 
@@ -563,21 +630,22 @@ setInterval(() => {
     obstaculos.filter(
       obstaculo =>
         obstaculo.x +
-        OBSTACULO_W > 0
+        obstaculo.largura > 0
+    );
+
+
+  estrelas =
+    estrelas.filter(
+      estrela =>
+        estrela.x +
+        estrela.tamanho > 0
     );
 
 
 
-  const vivos =
-    Object.values(jogadores)
-      .filter(
-        jogador =>
-          jogador.vivo
-      );
-
-
   if (
-    vivos.length === 0
+    jogadoresVivos === 0 &&
+    Object.keys(jogadores).length > 0
   ) {
 
     jogoAtivo = false;
@@ -587,8 +655,8 @@ setInterval(() => {
 
   enviarEstado();
 
-
 }, 1000 / 30);
+
 
 
 server.listen(
@@ -597,12 +665,7 @@ server.listen(
   () => {
 
     console.log(
-      "Servidor multiplayer online"
-    );
-
-    console.log(
-      "Porta:",
-      PORT
+      `Servidor rodando na porta ${PORT}`
     );
 
   }
