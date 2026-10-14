@@ -60,29 +60,35 @@ const usuario = usuarios.get(ws.usuarioId);
 
   if (!usuario) return;
   // REGISTRAR USUÁRIO
-  if (data.tipo === "usuario") {
-    if (
-      typeof data.nome === "string" &&
-      data.nome.trim()
-    ) {
-      usuario.nome = data.nome.trim().substring(0, 30);
-    }
-    if (
-      typeof data.foto === "string" &&
-      data.foto.trim()
-    ) {
-      usuario.foto = data.foto.trim();
-    }
-    console.log("Usuário registrado:", {
-      nome: usuario.nome,
-      foto: usuario.foto
-    });
-    enviar(ws, {
-      tipo: "usuario_configurado",
-      usuario
-    });
-    return;
+if (data.tipo === "usuario") {
+  if (typeof data.nome === "string" && data.nome.trim()) {
+    usuario.nome = data.nome.trim().substring(0, 30);
   }
+
+  console.log("Foto recebida:", {
+    existe: typeof data.foto === "string",
+    inicio: typeof data.foto === "string"
+      ? data.foto.substring(0, 50)
+      : data.foto
+  });
+
+  if (
+    typeof data.foto === "string" &&
+    data.foto.startsWith("data:image/")
+  ) {
+    usuario.foto = data.foto;
+  }
+
+  console.log("Foto salva:", usuario.foto.substring(0, 50));
+
+  enviar(ws, {
+    tipo: "usuario_configurado",
+    usuario
+  });
+
+  return;
+}
+
   // ENVIAR MENSAGEM DE TEXTO
   if (data.tipo === "mensagem") {
     if (
