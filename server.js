@@ -2,7 +2,7 @@ const http = require(“http”);
 const WebSocket = require(“ws”);
 
 const PORT = process.env.PORT || 10000;
-const FOTO_PADRAO = “”;
+const FOTO_PADRAO = “personagem.png”;
 
 const server = http.createServer((req, res) => {
 res.writeHead(200, {
@@ -67,9 +67,16 @@ const usuario = usuarios.get(ws.usuarioId);
     ) {
       usuario.nome = data.nome.trim().substring(0, 30);
     }
-    if (typeof data.foto === "string" && data.foto.trim()) {
-  usuario.foto = data.foto.trim();
-}
+    if (
+      typeof data.foto === "string" &&
+      data.foto.trim()
+    ) {
+      usuario.foto = data.foto.trim();
+    }
+    console.log("Usuário registrado:", {
+      nome: usuario.nome,
+      foto: usuario.foto
+    });
     enviar(ws, {
       tipo: "usuario_configurado",
       usuario
@@ -86,7 +93,8 @@ const usuario = usuarios.get(ws.usuarioId);
     }
     enviarTodos({
       tipo: "mensagem",
-      id: Date.now() + "-" + Math.random().toString(36).substring(2, 7),
+      id: Date.now() + "-" +
+        Math.random().toString(36).substring(2, 7),
       usuario: {
         id: usuario.id,
         nome: usuario.nome,
@@ -107,7 +115,8 @@ const usuario = usuarios.get(ws.usuarioId);
     }
     enviarTodos({
       tipo: "sticker",
-      id: Date.now() + "-" + Math.random().toString(36).substring(2, 7),
+      id: Date.now() + "-" +
+        Math.random().toString(36).substring(2, 7),
       usuario: {
         id: usuario.id,
         nome: usuario.nome,
@@ -119,7 +128,10 @@ const usuario = usuarios.get(ws.usuarioId);
     return;
   }
 } catch (erro) {
-  console.log("Erro ao processar mensagem:", erro.message);
+  console.log(
+    "Erro ao processar mensagem:",
+    erro.message
+  );
 }
 
 });
