@@ -1,250 +1,141 @@
-const http = require("http");
-const WebSocket = require("ws");
+const http = require(“http”);
+const WebSocket = require(“ws”);
 
 const PORT = process.env.PORT || 10000;
-
-const FOTO_PADRAO = "personagem.png";
+const FOTO_PADRAO = “personagem.png”;
 
 const server = http.createServer((req, res) => {
-  res.writeHead(200, {
-    "Content-Type": "application/json"
-  });
-
-  res.end(JSON.stringify({
-    status: "online",
-    sistema: "Whmer Chat"
-  }));
+res.writeHead(200, {
+“Content-Type”: “application/json”
 });
 
-const wss = new WebSocket.Server({
-  server
+res.end(JSON.stringify({
+status: “online”,
+sistema: “Whmer Chat”
+}));
 });
+
+const wss = new WebSocket.Server({ server });
 
 const usuarios = new Map();
 
 function enviarTodos(dados) {
-  const mensagem = JSON.stringify(dados);
+const mensagem = JSON.stringify(dados);
 
-  for (const ws of wss.clients) {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(mensagem);
-    }
-  }
+for (const ws of wss.clients) {
+if (ws.readyState === WebSocket.OPEN) {
+ws.send(mensagem);
+}
+}
 }
 
 function enviar(ws, dados) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(dados));
-  }
+if (ws.readyState === WebSocket.OPEN) {
+ws.send(JSON.stringify(dados));
+}
 }
 
-wss.on("connection", (ws) => {
+wss.on(“connection”, (ws) => {
+const id = Math.random().toString(36).substring(2, 10);
 
-  const id =
-    Math.random().toString(36).substring(2, 10);
+const usuario = {
+id,
+nome: “Anônimo”,
+foto: FOTO_PADRAO
+};
 
-  const usuario = {
-    id: id,
-    nome: "Anônimo",
-    foto: FOTO_PADRAO
-  };
+usuarios.set(id, usuario);
+ws.usuarioId = id;
 
-  usuarios.set(id, usuario);
+enviar(ws, {
+tipo: “conectado”,
+seuId: id,
+foto: usuario.foto
+});
 
-  ws.usuarioId = id;
+ws.on(“message”, (dados) => {
+try {
+const data = JSON.parse(dados);
+const usuario = usuarios.get(ws.usuarioId);
 
-
-
-  enviar(ws, {
-    tipo: "conectado",
-    seuId: id,
-    foto: FOTO_PADRAO
-  });
-
-
-
-  ws.on("message", (dados) => {
-
-    try {
-
-      const data = JSON.parse(dados);
-
-      const usuario =
-        usuarios.get(ws.usuarioId);
-
-      if (!usuario) return;
-
-
-      /*
-      =========================
-      USUÁRIO
-      =========================
-      */
-
-      if (data.tipo === "usuario") {
-
-        if (
-          typeof data.nome === "string" &&
-          data.nome.trim()
-        ) {
-
-          usuario.nome =
-            data.nome
-              .trim()
-              .substring(0, 30);
-
-        }
-
-        usuario.foto = FOTO_PADRAO;
-
-        enviar(ws, {
-          tipo: "usuario_configurado",
-          usuario: usuario
-        });
-
-        return;
-      }
-
-
-      /*
-      =========================
-      TEXTO
-      =========================
-      */
-
-      if (data.tipo === "mensagem") {
-
-        if (
-          typeof data.texto !== "string" ||
-          !data.texto.trim()
-        ) {
-          return;
-        }
-
-        enviarTodos({
-
-          tipo: "mensagem",
-
-          id:
-            Date.now() +
-            "-" +
-            Math.random()
-              .toString(36)
-              .substring(2, 7),
-
-          usuario: {
-            id: usuario.id,
-            nome: usuario.nome,
-            foto: FOTO_PADRAO
-          },
-
-          texto:
-            data.texto
-              .trim()
-              .substring(0, 2000),
-
-          data: Date.now()
-
-        });
-
-        return;
-      }
-
-
-      /*
-      =========================
-      STICKER
-      =========================
-      */
-
-      if (data.tipo === "sticker") {
-
-        if (
-          typeof data.imagem !== "string" ||
-          !data.imagem.trim()
-        ) {
-          return;
-        }
-
-        enviarTodos({
-
-          tipo: "sticker",
-
-          id:
-            Date.now() +
-            "-" +
-            Math.random()
-              .toString(36)
-              .substring(2, 7),
-
-          usuario: {
-            id: usuario.id,
-            nome: usuario.nome,
-            foto: FOTO_PADRAO
-          },
-
-          imagem:
-            data.imagem.trim(),
-
-          data: Date.now()
-
-        });
-
-        return;
-      }
-
-    } catch (erro) {
-
-      console.log(
-        "Erro ao processar mensagem:",
-        erro.message
-      );
-
+  if (!usuario) return;
+  // REGISTRAR USUÁRIO
+  if (data.tipo === "usuario") {
+    if (
+      typeof data.nome === "string" &&
+      data.nome.trim()
+    ) {
+      usuario.nome = data.nome.trim().substring(0, 30);
     }
-
-  });
-
-
-  /*
-  =========================
-  DESCONECTOU
-  =========================
-  */
-
-  ws.on("close", () => {
-
-    usuarios.delete(ws.usuarioId);
-
-  });
-
-
-  /*
-  =========================
-  ERRO
-  =========================
-  */
-
-  ws.on("error", (erro) => {
-
-    console.log(
-      "WebSocket:",
-      erro.message
-    );
-
-  });
+    if (
+      typeof data.foto === "string" &&
+      data.foto.trim()
+    ) {
+      usuario.foto = data.foto.trim();
+    }
+    enviar(ws, {
+      tipo: "usuario_configurado",
+      usuario
+    });
+    return;
+  }
+  // ENVIAR MENSAGEM DE TEXTO
+  if (data.tipo === "mensagem") {
+    if (
+      typeof data.texto !== "string" ||
+      !data.texto.trim()
+    ) {
+      return;
+    }
+    enviarTodos({
+      tipo: "mensagem",
+      id: Date.now() + "-" + Math.random().toString(36).substring(2, 7),
+      usuario: {
+        id: usuario.id,
+        nome: usuario.nome,
+        foto: usuario.foto
+      },
+      texto: data.texto.trim().substring(0, 2000),
+      data: Date.now()
+    });
+    return;
+  }
+  // ENVIAR STICKER
+  if (data.tipo === "sticker") {
+    if (
+      typeof data.imagem !== "string" ||
+      !data.imagem.trim()
+    ) {
+      return;
+    }
+    enviarTodos({
+      tipo: "sticker",
+      id: Date.now() + "-" + Math.random().toString(36).substring(2, 7),
+      usuario: {
+        id: usuario.id,
+        nome: usuario.nome,
+        foto: usuario.foto
+      },
+      imagem: data.imagem.trim(),
+      data: Date.now()
+    });
+    return;
+  }
+} catch (erro) {
+  console.log("Erro ao processar mensagem:", erro.message);
+}
 
 });
 
+ws.on(“close”, () => {
+usuarios.delete(ws.usuarioId);
+});
 
+ws.on(“error”, (erro) => {
+console.log(“WebSocket:”, erro.message);
+});
+});
 
-server.listen(
-  PORT,
-  "0.0.0.0",
-  () => {
-
-    console.log(
-      `Whmer Chat rodando na porta ${PORT}`
-    );
-
-  }
-);
+server.listen(PORT, “0.0.0.0”, () => {
+console.log(Whmer Chat rodando na porta ${PORT});
+});
