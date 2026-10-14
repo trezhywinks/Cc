@@ -2,7 +2,7 @@ const http = require(“http”);
 const WebSocket = require(“ws”);
 
 const PORT = process.env.PORT || 10000;
-const FOTO_PADRAO = “personagem.png”;
+const FOTO_PADRAO = “”;
 
 const server = http.createServer((req, res) => {
 res.writeHead(200, {
@@ -67,12 +67,9 @@ const usuario = usuarios.get(ws.usuarioId);
     ) {
       usuario.nome = data.nome.trim().substring(0, 30);
     }
-    if (
-      typeof data.foto === "string" &&
-      data.foto.trim()
-    ) {
-      usuario.foto = data.foto.trim();
-    }
+    if (typeof data.foto === "string" && data.foto.trim()) {
+  usuario.foto = data.foto.trim();
+}
     enviar(ws, {
       tipo: "usuario_configurado",
       usuario
