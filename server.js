@@ -108,35 +108,56 @@ wss.on("connection", (ws) => {
       }
 
       // VERIFICAR USUÁRIO
-      if (data.tipo === "verificar") {
-        if (data.codigo !== CODIGO_VERIFICACAO) {
-          enviar(ws, {
-            tipo: "resultadoVerificacao",
-            sucesso: false,
-            mensagem: "Código incorreto."
-          });
+      
+if (data.tipo === "verificar") {
+  const codigo = String(data.codigo || "")
+    .trim()
+    .toUpperCase();
 
-          return;
-        }
+  if (codigo !== CODIGO_VERIFICACAO) {
+    enviar(ws, {
+      tipo: "resultadoVerificacao",
+      sucesso: false,
+      mensagem: "Código incorreto."
+    });
 
-        usuariosVerificados.add(usuario.id);
+    return;
+  }
 
-        enviar(ws, {
-          tipo: "resultadoVerificacao",
-          sucesso: true,
-          mensagem: "Conta verificada!",
-          id: usuario.id
-        });
+  if (usuariosVerificados.has(usuario.id)) {
+    enviar(ws, {
+      tipo: "resultadoVerificacao",
+      sucesso: true,
+      mensagem: "Esta conta já possui o selo!",
+      id: usuario.id
+    });
 
-        // Avisa todos os usuários conectados
-        enviarTodos({
-          tipo: "usuarioVerificado",
-          id: usuario.id,
-          nome: usuario.nome
-        });
+    return;
+  }
 
-        return;
-      }
+  usuariosVerificados.add(usuario.id);
+
+  enviar(ws, {
+    tipo: "resultadoVerificacao",
+    sucesso: true,
+    mensagem: "Conta verificada! Selo resgatado.",
+    id: usuario.id
+  });
+
+  enviarTodos({
+    tipo: "usuarioVerificado",
+    id: usuario.id,
+    nome: usuario.nome
+  });
+
+  enviarTodos({
+    tipo: "usuarioAtualizado",
+    usuario: dadosUsuario(usuario)
+  });
+
+  return;
+}
+
 
       // MENSAGEM DE TEXTO
       if (data.tipo === "mensagem") {
