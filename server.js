@@ -41,7 +41,6 @@ function enviarTodos(dados) {
 function dadosUsuario(usuario) {
   return {
     id: usuario.id,
-    codigo: CODIGO_VERICACAO,
     nome: usuario.nome,
     foto: usuario.foto,
     verificado: usuariosVerificados.has(usuario.id)
