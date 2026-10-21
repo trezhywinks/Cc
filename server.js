@@ -41,6 +41,7 @@ function enviarTodos(dados) {
 function dadosUsuario(usuario) {
   return {
     id: usuario.id,
+    codigo: CODIGO_VERICACAO,
     nome: usuario.nome,
     foto: usuario.foto,
     verificado: usuariosVerificados.has(usuario.id)
@@ -62,7 +63,6 @@ wss.on("connection", (ws) => {
   enviar(ws, {
     tipo: "conectado",
     seuId: id,
-    codigo: CODIGO_VERIFICACAO,
     foto: usuario.foto,
     verificado: usuariosVerificados.has(id),
     verificados: [...usuariosVerificados]
