@@ -62,6 +62,7 @@ wss.on("connection", (ws) => {
   enviar(ws, {
     tipo: "conectado",
     seuId: id,
+    codigo: CODIGO_VERIFICACAO,
     foto: usuario.foto,
     verificado: usuariosVerificados.has(id),
     verificados: [...usuariosVerificados]
