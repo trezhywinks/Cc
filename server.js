@@ -118,7 +118,7 @@ if (data.tipo === "verificar") {
     enviar(ws, {
       tipo: "resultadoVerificacao",
       sucesso: false,
-      mensagem: "Código incorreto."
+      mensagem: "Incorrect Code."
     });
 
     return;
@@ -128,7 +128,7 @@ if (data.tipo === "verificar") {
     enviar(ws, {
       tipo: "resultadoVerificacao",
       sucesso: true,
-      mensagem: "Esta conta já possui o selo!",
+      mensagem: "This account already has the prime!",
       id: usuario.id
     });
 
@@ -140,7 +140,7 @@ if (data.tipo === "verificar") {
   enviar(ws, {
     tipo: "resultadoVerificacao",
     sucesso: true,
-    mensagem: "Conta verificada! Selo resgatado.",
+    mensagem: "Verified account! Redeemed code.",
     id: usuario.id
   });
 
